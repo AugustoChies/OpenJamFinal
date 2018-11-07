@@ -1,0 +1,5 @@
+Script para deteccao de batida:
+
+Criador: Domingo Garcia
+Nome: Beat Detection
+Link: https://github.com/DrXoo/BeatDetection
