@@ -3,13 +3,29 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerBeatMovement : MonoBehaviour {
-    public int life;
+    public int life;   
     public BPMtimer selectedBeatDetection;
     public KeyCode left, right;
-    public bool leftinput, rightinput,attacking;
+    public bool leftinput, rightinput, attacking;
+    public ScriptableBool dead;
     public GameObject leftsensor, rightsensor;
     //Reset bools from previous action after some loops, to properly let enemies see them in time 
     private float resetpreviousaction;
+    //value leaving player vulnerable for 1 beat when he misses an attack   
+    public int fumble;
+    public Color fumbleColor;
+    private Color previousColorMemory;
+
+    public GameObject lifebar1, lifebar2, lifebar3;
+
+    public Sprite standingSp, damageSp, MissSP;
+    public Sprite[] attackingSp;
+
+    public AudioClip[] hitsounds;
+    public AudioClip hurtsound;
+
+    public ScriptableInt score;
+    public ScriptableInt comboMultiplier;
 
 
     private delegate void Movement();
@@ -20,36 +36,63 @@ public class PlayerBeatMovement : MonoBehaviour {
         selectedBeatDetection.OnBPMBeat += OnBeat;
         life = 3;
         resetpreviousaction = 0;
+        fumble = 0;
+        score.value = 0;
+        comboMultiplier.value = 1;
+        dead.value = false;
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		if(Input.GetKeyDown(left))
+        if (fumble <= 0 && dead.value == false)
         {
-            Moveonbeat = moveLeft;
-            if (leftsensor.GetComponent<TriggerSensor>().isInside)
+            if (Input.GetKeyDown(left))
             {
-                Moveonbeat += leftAttack;
-                attacking = true;
+                if (leftsensor.GetComponent<TriggerSensor>().isInside)
+                {
+                    Moveonbeat = moveLeft;
+                    Moveonbeat += leftAttack;
+                    attacking = true;
+                }
+                else
+                {
+                    previousColorMemory = this.gameObject.GetComponent<ColorBeatAlternation>().beatcolors[0];
+                    this.gameObject.GetComponent<ColorBeatAlternation>().beatcolors[0] = fumbleColor;
+                    this.GetComponent<SpriteRenderer>().sprite = MissSP;
+                    fumble = 2;
+                }
+                leftinput = true;
+                rightinput = false;
             }
-            leftinput = true;
-            rightinput = false;
-        }
-        else if (Input.GetKeyDown(right))
-        {
-            Moveonbeat = moveRight;
-            if (rightsensor.GetComponent<TriggerSensor>().isInside)
+            else if (Input.GetKeyDown(right))
             {
-                Moveonbeat += rightAttack;
-                attacking = true;
+                if (rightsensor.GetComponent<TriggerSensor>().isInside)
+                {
+                    Moveonbeat = moveRight;
+                    Moveonbeat += rightAttack;
+                    attacking = true;
+                }
+                else
+                {
+                    previousColorMemory = this.gameObject.GetComponent<ColorBeatAlternation>().beatcolors[0];
+                    this.gameObject.GetComponent<ColorBeatAlternation>().beatcolors[0] = fumbleColor;
+                    this.GetComponent<SpriteRenderer>().sprite = MissSP;
+                    fumble = 2;
+                }
+                leftinput = false;
+                rightinput = true;
             }
-            leftinput = false;
-            rightinput = true;
         }
 
-        if(life <= 0)
+        lifebar1.SetActive(life > 0);
+        lifebar2.SetActive(life > 1);
+        lifebar3.SetActive(life > 2);
+
+        if (life <= 0)
         {
-            Destroy(this.gameObject);
+            this.gameObject.GetComponent<SpriteRenderer>().enabled = false;
+            this.gameObject.GetComponent<BoxCollider2D>().enabled = false;
+            dead.value = true;
         }
 
         if(resetpreviousaction > 0)
@@ -77,19 +120,58 @@ public class PlayerBeatMovement : MonoBehaviour {
 
     void rightAttack()
     {
-        Destroy(rightsensor.GetComponent<TriggerSensor>().colidedObject);
+        rightsensor.GetComponent<TriggerSensor>().colidedObject.GetComponent<EnemyBeatMove>().Die();
+        int randnumber = Random.Range(0, attackingSp.Length);
+        this.GetComponent<SpriteRenderer>().sprite = attackingSp[randnumber];
+        this.GetComponent<SpriteRenderer>().flipX = false;
+
+        score.value += 10 * comboMultiplier.value;
+        comboMultiplier.value++;
+
+        randnumber = Random.Range(0, hitsounds.Length);
+        this.gameObject.GetComponent<AudioSource>().clip = hitsounds[randnumber];
+        this.gameObject.GetComponent<AudioSource>().Play();
     }
 
     void leftAttack()
     {
-        Destroy(leftsensor.GetComponent<TriggerSensor>().colidedObject);
+        leftsensor.GetComponent<TriggerSensor>().colidedObject.GetComponent<EnemyBeatMove>().Die();
+        int randnumber = Random.Range(0, attackingSp.Length);
+        this.GetComponent<SpriteRenderer>().sprite = attackingSp[randnumber];
+        this.GetComponent<SpriteRenderer>().flipX = true;
+
+        score.value += 10 * comboMultiplier.value;
+        comboMultiplier.value++;
+
+        randnumber = Random.Range(0, hitsounds.Length);
+        this.gameObject.GetComponent<AudioSource>().clip = hitsounds[randnumber];
+        this.gameObject.GetComponent<AudioSource>().Play();
+    }
+
+    public void TakeDamage()
+    {
+        life--;
+        this.gameObject.GetComponent<AudioSource>().clip = hurtsound;
+        this.gameObject.GetComponent<AudioSource>().Play();
+        this.gameObject.GetComponent<SpriteRenderer>().sprite = damageSp;
     }
 
     void OnBeat()
     {
         if(Moveonbeat != null)
             Moveonbeat();
+        else if(this.gameObject != null && Moveonbeat == null && fumble <= 0)
+        {
+            this.gameObject.GetComponent<SpriteRenderer>().sprite = standingSp;
+            comboMultiplier.value = 1;
+        }
         Moveonbeat = null;
         resetpreviousaction = 3;
+        fumble--;
+
+        if(fumble == 0)
+        {           
+            this.gameObject.GetComponent<ColorBeatAlternation>().beatcolors[0] = previousColorMemory;
+        }
     }
 }

@@ -3,3 +3,8 @@ Script para deteccao de batida:
 Criador: Domingo Garcia
 Nome: Beat Detection
 Link: https://github.com/DrXoo/BeatDetection
+
+Fonte utilizada:
+Criador: Font-a-licious
+Nome: Alba Super
+Link: https://www.1001fonts.com/alba-font.html

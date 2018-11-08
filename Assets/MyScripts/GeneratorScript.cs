@@ -10,7 +10,9 @@ public class GeneratorScript : MonoBehaviour {
     public EnemyDirection spawndirection;
     public Color[] possiblecolors;
     //the number of beats it takes, on average, to spawn 1 enemy
-    public int AverageBeatsToSpawn;
+    public int AverageBeatsToSpawn;    
+    private int originalbeatsperSpawn;
+    public ScriptableInt score;
 
 
     //How close player can get to spawnpoint before it stops working
@@ -23,17 +25,30 @@ public class GeneratorScript : MonoBehaviour {
 	void Start () {
         selectedBeatDetection.OnBPMBeat += OnBeat;
         active = false;
+        originalbeatsperSpawn = AverageBeatsToSpawn;
     }
 	
 	// Update is called once per frame
 	void Update () {
-		if(Vector3.Distance(player.transform.position,this.transform.position) <= playerlimitproximity)
+        if (player != null)
         {
-            active = false;
+            if (Vector3.Distance(player.transform.position, this.transform.position) <= playerlimitproximity)
+            {
+                active = false;
+            }
+            else
+            {
+                active = true;
+            }
         }
-        else
+        //increasing difficulty
+        if (AverageBeatsToSpawn > 2)
         {
-            active = true;
+            int dificultyincrease = originalbeatsperSpawn - score.value / (50 * ((originalbeatsperSpawn+1) - AverageBeatsToSpawn));
+            if(dificultyincrease < AverageBeatsToSpawn)
+            {
+                AverageBeatsToSpawn = dificultyincrease;
+            }
         }
 	}
 
@@ -41,8 +56,8 @@ public class GeneratorScript : MonoBehaviour {
     {
         if (active)
         {
-            int randnumber = (int)(Random.Range(0,int.MaxValue) % AverageBeatsToSpawn);
-
+            int randnumber = (Random.Range(0,AverageBeatsToSpawn));
+            
             if (randnumber == 0)
             {
                 GameObject newenemy = Instantiate(enemyPrefab,this.transform.position,Quaternion.identity);
@@ -51,7 +66,7 @@ public class GeneratorScript : MonoBehaviour {
 
                 newenemy.GetComponent<EnemyBeatMove>().mydirection = spawndirection;
 
-                randnumber = Mathf.Clamp(Random.Range(0, possiblecolors.Length), 0, possiblecolors.Length);
+                randnumber = Random.Range(0, possiblecolors.Length);
 
                 newenemy.GetComponent<ColorBeatAlternation>().beatcolors[0] = possiblecolors[randnumber];
             }
